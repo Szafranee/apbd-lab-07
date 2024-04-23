@@ -4,17 +4,10 @@ using Lab_07.Services;
 
 namespace Lab_07.Validators;
 
-public class CreateOrderValidator : AbstractValidator<CreateOrderRequest>
+public class CreateOrderValidator : AbstractValidator<AddProductToWarehouseRequest>
 {
     public CreateOrderValidator(IDbServiceDapper dbService)
     {
-        /*
-            2. Możemy dodać produkt do magazynu tylko wtedy, gdy istnieje
-            zamówienie zakupu produktu w tabeli Order. Dlatego sprawdzamy, czy w
-            tabeli Order istnieje rekord z IdProduktu i Ilością (Amount), które
-            odpowiadają naszemu żądaniu. Data utworzenia zamówienia powinna
-            być wcześniejsza niż data utworzenia w żądaniu
-         */
         RuleFor(x => x.ProductId).NotEmpty();
         RuleFor(x => x.WarehouseId).NotEmpty();
         RuleFor(x => x.Amount).GreaterThan(0);

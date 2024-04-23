@@ -8,11 +8,12 @@ namespace Lab_07.Services;
 
 public interface IDbServiceDapper
 {
-    Task<int> CreateOrder(CreateOrderRequest request);
+    Task<int> AddProductToWarehouse(AddProductToWarehouseRequest toWarehouseRequest);
     Task<Product?> GetProduct(int id);
     Task<Warehouse?> GetWarehouse(int id);
     Task<Order?> GetOrder(int id);
     Task<bool> IsOrderFulfilled(int productId, int amount);
+    Task<int?> AddProductToWarehouseProcedure(AddProductToWarehouseRequest addProductToWarehouseRequest);
 }
 
 public class DbServiceDapper(IConfiguration configuration) : IDbServiceDapper
@@ -28,7 +29,7 @@ public class DbServiceDapper(IConfiguration configuration) : IDbServiceDapper
         return connection;
     }
 
-    public async Task<int> CreateOrder(CreateOrderRequest request)
+    public async Task<int> AddProductToWarehouse(AddProductToWarehouseRequest toWarehouseRequest)
     {
         await using var connection = await GetConnection();
 
@@ -36,25 +37,25 @@ public class DbServiceDapper(IConfiguration configuration) : IDbServiceDapper
 
         try
         {
-            var orderId = await GetOrderId(request.ProductId, request.Amount);
+            var orderId = await GetOrderId(toWarehouseRequest.ProductId, toWarehouseRequest.Amount);
             Console.WriteLine(orderId);
 
             await connection.ExecuteAsync(
                 "INSERT INTO Product_Warehouse (IdWarehouse, IdProduct, IdOrder, Amount, Price, CreatedAt) VALUES (@IdWare, @IdProd, @IdOrd, @Am, @Pr, @CrAt)",
                 new
                 {
-                    IdWare = request.WarehouseId,
-                    IdProd = request.ProductId,
+                    IdWare = toWarehouseRequest.WarehouseId,
+                    IdProd = toWarehouseRequest.ProductId,
                     IdOrd = orderId,
-                    Am = request.Amount,
-                    Pr = GetProduct(request.ProductId).Result?.Price * request.Amount,
-                    CrAt = request.CreatedAt
+                    Am = toWarehouseRequest.Amount,
+                    Pr = GetProduct(toWarehouseRequest.ProductId).Result?.Price * toWarehouseRequest.Amount,
+                    CrAt = toWarehouseRequest.CreatedAt
                 },
                 transaction);
 
             await connection.ExecuteAsync(
                 "UPDATE [Order] SET FulfilledAt = @FulAt WHERE IdOrder = @Id",
-                new { FulAt = request.CreatedAt, Id = orderId },
+                new { FulAt = toWarehouseRequest.CreatedAt, Id = orderId },
                 transaction);
 
             var result = await connection.QueryFirstOrDefaultAsync<int>(
@@ -133,6 +134,24 @@ public class DbServiceDapper(IConfiguration configuration) : IDbServiceDapper
             await connection.QueryFirstOrDefaultAsync<int>(
                 "SELECT IdOrder FROM [Order] WHERE IdProduct = @IdProduct AND Amount = @Amount",
                 new { IdProduct = productId, Amount = amount});
+
+        return result;
+    }
+
+    public async Task<int?> AddProductToWarehouseProcedure(AddProductToWarehouseRequest addProductToWarehouseRequest)
+    {
+        await using var connection = await GetConnection();
+
+        var result = await connection.QueryFirstOrDefaultAsync<int>(
+            "AddProductToWarehouse",
+            new
+            {
+                IdProduct = addProductToWarehouseRequest.ProductId,
+                IdWarehouse = addProductToWarehouseRequest.WarehouseId,
+                Amount = addProductToWarehouseRequest.Amount,
+                CreatedAt = addProductToWarehouseRequest.CreatedAt
+            },
+            commandType: CommandType.StoredProcedure);
 
         return result;
     }

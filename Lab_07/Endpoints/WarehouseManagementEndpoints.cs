@@ -12,14 +12,23 @@ public static class WarehouseManagementEndpoints
     {
         //POST /warehouses
         app.MapPost("/warehouses",
-            async (IConfiguration configuration, IDbServiceDapper dbServiceDapper,
-                [FromBody] CreateOrderRequest createOrderRequest, IValidator<CreateOrderRequest> newOrderValidator) =>
+            async (IDbServiceDapper dbServiceDapper,
+                [FromBody] AddProductToWarehouseRequest createOrderRequest,
+                IValidator<AddProductToWarehouseRequest> newOrderValidator) =>
             {
                 var validationResult = await newOrderValidator.ValidateAsync(createOrderRequest);
                 if (!validationResult.IsValid) return Results.ValidationProblem(validationResult.ToDictionary());
 
-                var orderId = await dbServiceDapper.CreateOrder(createOrderRequest);
+                var orderId = await dbServiceDapper.AddProductToWarehouse(createOrderRequest);
                 return Results.Created("", orderId);
             });
+
+
+        app.MapPost("/warehouse-proc", async (IDbServiceDapper dbServiceDapper,
+            [FromBody] AddProductToWarehouseRequest addProductToWarehouseRequest) =>
+        {
+            var orderId = await dbServiceDapper.AddProductToWarehouseProcedure(addProductToWarehouseRequest);
+            return Results.Created("", orderId);
+        });
     }
 }
