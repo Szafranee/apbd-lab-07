@@ -16,8 +16,27 @@ public static class WarehouseManagementEndpoints
                 [FromBody] AddProductToWarehouseRequest createOrderRequest,
                 IValidator<AddProductToWarehouseRequest> newOrderValidator) =>
             {
-                var validationResult = await newOrderValidator.ValidateAsync(createOrderRequest);
-                if (!validationResult.IsValid) return Results.ValidationProblem(validationResult.ToDictionary());
+                if(await dbServiceDapper.GetProduct(createOrderRequest.ProductId) == null)
+                {
+                    return Results.NotFound("Product does not exist");
+                }
+
+                if(await dbServiceDapper.GetWarehouse(createOrderRequest.WarehouseId) == null)
+                {
+                    return Results.NotFound("Warehouse does not exist");
+                }
+
+                var order = await dbServiceDapper.GetOrder(createOrderRequest.ProductId);
+                if (order == null || order.Amount != createOrderRequest.Amount ||
+                    order.CreatedAt > createOrderRequest.CreatedAt)
+                {
+                    return Results.NotFound("Order does not exist");
+                }
+
+                if(await dbServiceDapper.IsOrderFulfilled(createOrderRequest.ProductId, createOrderRequest.Amount))
+                {
+                    return Results.NotFound("Order is already fulfilled");
+                }
 
                 var orderId = await dbServiceDapper.AddProductToWarehouse(createOrderRequest);
                 return Results.Created("", orderId);
