@@ -13,9 +13,12 @@ public static class WarehouseManagementEndpoints
         //POST /warehouses
         app.MapPost("/warehouses",
             async (IDbServiceDapper dbServiceDapper,
-                [FromBody] AddProductToWarehouseRequest createOrderRequest,
+                AddProductToWarehouseRequest createOrderRequest,
                 IValidator<AddProductToWarehouseRequest> newOrderValidator) =>
             {
+                var validation = await newOrderValidator.ValidateAsync(createOrderRequest);
+                if (!validation.IsValid) return Results.ValidationProblem(validation.ToDictionary());
+
                 if(await dbServiceDapper.GetProduct(createOrderRequest.ProductId) == null)
                 {
                     return Results.NotFound("Product does not exist");
