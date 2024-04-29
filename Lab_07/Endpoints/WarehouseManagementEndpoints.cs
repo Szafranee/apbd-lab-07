@@ -47,10 +47,21 @@ public static class WarehouseManagementEndpoints
 
 
         app.MapPost("/warehouse-proc", async (IDbServiceDapper dbServiceDapper,
-            [FromBody] AddProductToWarehouseRequest addProductToWarehouseRequest) =>
+             AddProductToWarehouseRequest addProductToWarehouseRequest, IValidator<AddProductToWarehouseRequest> validator) =>
         {
-            var orderId = await dbServiceDapper.AddProductToWarehouseProcedure(addProductToWarehouseRequest);
-            return Results.Created("", orderId);
+            var validation = await validator.ValidateAsync(addProductToWarehouseRequest);
+            if (!validation.IsValid) return Results.ValidationProblem(validation.ToDictionary());
+
+            try
+            {
+                var orderId = await dbServiceDapper.AddProductToWarehouseProcedure(addProductToWarehouseRequest);
+                return Results.Created("", orderId);
+            }
+            catch (SqlException e)
+            {
+                return Results.NotFound(e.Message);
+            }
+
         });
     }
 }
